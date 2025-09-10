@@ -103,10 +103,14 @@ if archivos and st.button("🔍 Analizar imágenes"):
         dosis_touch += 0.3 * hectareas
         dosis_metsulfuron += 0.2 * hectareas
 
-    # --- ⚡ Nueva condición especial (según lo que pediste)
+    # --- ⚡ Nueva condición especial (baja cobertura + altura <50cm + sin pasto meloso)
     if (promedio < 30) and (not altura_maleza) and (not pres_meloso):
         if pres_gramineas in ["Baja", "Media"]:
             dosis_touch += 0.2 * hectareas
+
+    # --- ⚡ Condición final: si no hay hoja ancha ni helechos, metsulfurón = 0
+    if pres_hoja_ancha == "Ninguna" and not pres_helechos:
+        dosis_metsulfuron = 0
 
     # ==========================
     # Resultados finales
@@ -115,5 +119,13 @@ if archivos and st.button("🔍 Analizar imágenes"):
     st.write(f"Dosis total de **Touchdown** para {hectareas:.1f} ha: {dosis_touch:.3f} L")
     st.write(f"Dosis total de **Metsulfurón** para {hectareas:.1f} ha: {dosis_metsulfuron:.3f} unidades")
 
-   
+    # Guardar resultados
+    resultados = pd.DataFrame({
+        "Cobertura promedio (%)": [promedio],
+        "Hectáreas": [hectareas],
+        "Touchdown (L)": [dosis_touch],
+        "Metsulfurón (unidades)": [dosis_metsulfuron]
+    })
+    resultados.to_excel("resultados_cobertura.xlsx", index=False)
+    st.success("✅ Resultados guardados en 'resultados_cobertura.xlsx'")
 
