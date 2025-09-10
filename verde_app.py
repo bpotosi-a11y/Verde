@@ -39,32 +39,6 @@ pres_meloso = st.checkbox("¿Presencia de pasto meloso?")
 # Subir imágenes
 archivos = st.file_uploader("Selecciona tus imágenes", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
-# ================================
-# Nueva función: dosis completa si solo hay gramíneas
-# ================================
-def dosis_solo_gramineas(pres_gram, pres_hoja, pres_helechos, pres_ciperaceas, pres_mortiño, pres_gargantillo, pres_cuero_sapo, pres_meloso, promedio, hectareas):
-    """
-    Si solo hay gramíneas presentes (sin hoja ancha, helechos ni otras malezas),
-    se calcula la dosis de Touchdown tomando todo el valor de cobertura.
-    """
-    if (pres_gram != "Ninguna" and 
-        pres_hoja == "Ninguna" and 
-        not pres_helechos and 
-        not pres_ciperaceas and 
-        not pres_mortiño and 
-        not pres_gargantillo and 
-        not pres_cuero_sapo and 
-        not pres_meloso):
-        
-        factor = 3 if promedio < 60 else 3
-        dosis = (promedio / 100) * hectareas * factor
-        return dosis
-    else:
-        return None  # No aplica esta condición
-
-# ================================
-# Análisis de imágenes y cálculo de dosis
-# ================================
 if archivos and st.button("🔍 Analizar imágenes"):
     porcentajes = []
     for archivo in archivos:
@@ -82,29 +56,19 @@ if archivos and st.button("🔍 Analizar imágenes"):
     dosis_touch = 0
     dosis_metsulfuron = 0
 
-    # Revisamos si aplica la nueva función de solo gramíneas
-    dosis_touch_solo_gram = dosis_solo_gramineas(
-        pres_gramineas, pres_hoja_ancha, pres_helechos, pres_ciperaceas,
-        pres_mortino, pres_gargantillo, pres_cuero_sapo, pres_meloso,
-        promedio, hectareas
-    )
+    # --- GRAMÍNEAS (Touchdown)
+    if pres_gramineas != "Ninguna":
+        if pres_gramineas == "Alta":
+            porc_gram = (4/5) * promedio
+        elif pres_gramineas == "Media":
+            porc_gram = (1/2) * promedio
+        elif pres_gramineas == "Baja":
+            porc_gram = (1/3) * promedio
 
-    if dosis_touch_solo_gram is not None:
-        dosis_touch = dosis_touch_solo_gram  # Sobrescribimos el cálculo previo
+        factor = 3 if promedio < 60 else 3
+        dosis_touch = (porc_gram/100) * hectareas * factor
     else:
-        # --- GRAMÍNEAS (Touchdown) cálculo normal
-        if pres_gramineas != "Ninguna":
-            if pres_gramineas == "Alta":
-                porc_gram = (4/5) * promedio
-            elif pres_gramineas == "Media":
-                porc_gram = (1/2) * promedio
-            elif pres_gramineas == "Baja":
-                porc_gram = (1/3) * promedio
-
-            factor = 3 if promedio < 60 else 3
-            dosis_touch = (porc_gram/100) * hectareas * factor
-        else:
-            dosis_touch = 0  # sin gramíneas → no hay dosis
+        dosis_touch = 0  # sin gramíneas → no hay dosis
 
     # --- HOJA ANCHA (Metsulfurón)
     if pres_hoja_ancha != "Ninguna":
@@ -154,5 +118,6 @@ if archivos and st.button("🔍 Analizar imágenes"):
     st.subheader("📊 Resultados finales")
     st.write(f"Dosis total de **Touchdown** para {hectareas:.1f} ha: {dosis_touch:.3f} L")
     st.write(f"Dosis total de **Metsulfurón** para {hectareas:.1f} ha: {dosis_metsulfuron:.3f} unidades")
+
 
 
