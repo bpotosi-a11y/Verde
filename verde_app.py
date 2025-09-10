@@ -119,13 +119,5 @@ if archivos and st.button("🔍 Analizar imágenes"):
     st.write(f"Dosis total de **Touchdown** para {hectareas:.1f} ha: {dosis_touch:.3f} L")
     st.write(f"Dosis total de **Metsulfurón** para {hectareas:.1f} ha: {dosis_metsulfuron:.3f} unidades")
 
-    # Guardar resultados
-    resultados = pd.DataFrame({
-        "Cobertura promedio (%)": [promedio],
-        "Hectáreas": [hectareas],
-        "Touchdown (L)": [dosis_touch],
-        "Metsulfurón (unidades)": [dosis_metsulfuron]
-    })
-    resultados.to_excel("resultados_cobertura.xlsx", index=False)
-    st.success("✅ Resultados guardados en 'resultados_cobertura.xlsx'")
+    
 
