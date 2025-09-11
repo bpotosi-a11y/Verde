@@ -120,4 +120,3 @@ if archivos and st.button("🔍 Analizar imágenes"):
     st.write(f"Dosis total de **Metsulfurón** para {hectareas:.1f} ha: {dosis_metsulfuron:.3f} unidades")
 
 
-
