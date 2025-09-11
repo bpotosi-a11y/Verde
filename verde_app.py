@@ -89,7 +89,7 @@ if archivos and st.button("🔍 Analizar imágenes"):
     if pres_helechos:
         dosis_metsulfuron += 0.1 * hectareas
     if pres_meloso:
-        dosis_touch += 0.3 * hectareas
+        dosis_touch += 0.2 * hectareas
 
     # Ajuste combinado: helechos + mortiño + gargantillo + cuero de sapo
     pres_extra = sum([pres_mortino, pres_gargantillo, pres_cuero_sapo])
