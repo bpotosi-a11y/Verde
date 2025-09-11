@@ -65,7 +65,7 @@ if archivos and st.button("🔍 Analizar imágenes"):
         elif pres_gramineas == "Baja":
             porc_gram = (1/3) * promedio
 
-        factor = 3 if promedio < 60 else 3
+        factor = 2.9 if promedio < 60 else 2.9
         dosis_touch = (porc_gram/100) * hectareas * factor
     else:
         dosis_touch = 0  # sin gramíneas → no hay dosis
