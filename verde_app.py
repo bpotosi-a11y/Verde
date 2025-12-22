@@ -35,7 +35,7 @@ pres_meloso = st.checkbox("¿Presencia de pasto meloso?")
 # Clasificación por porcentaje
 # ================================
 def clasificar(porc):
-    if porc <= 33:
+    if porc <= 25:
         return "Baja"
     elif porc <= 66:
         return "Media"
@@ -101,7 +101,7 @@ if porc_hojas == 0 and not pres_helechos:
 # ================================
 touch_fumi = {
     "Baja": "400 cm³",
-    "Media": "480 cm³",
+    "Media": "500 cm³",
     "Alta": "650 cm³"
 }
 
