@@ -1,34 +1,49 @@
-import cv2
-import numpy as np
 import pandas as pd
 import streamlit as st
-
-def calcular_verde(img):
-    gamma = 1.2
-    look_up_table = np.array([((i / 255.0) ** (1.0 / gamma)) * 255 
-                              for i in np.arange(0, 256)]).astype("uint8")
-    img = cv2.LUT(img, look_up_table)
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
-    lower_green = np.array([35, 40, 40])
-    upper_green = np.array([85, 255, 255])
-    mask = cv2.inRange(hsv, lower_green, upper_green)
-
-    porcentaje = (np.sum(mask > 0) / mask.size) * 100
-    return porcentaje, mask
 
 # ================================
 # 🌱 Interfaz con Streamlit
 # ================================
-st.title("🌱 Análisis de Cobertura Verde y Cálculo de Dosis")
+st.title("🌱 Cálculo de Dosis para Control de Malezas")
 
+# -------------------------------
 # Parámetros del lote
-hectareas = st.number_input("Número de hectáreas del lote", min_value=0.1, step=0.1)
+# -------------------------------
+hectareas = st.number_input(
+    "Número de hectáreas del lote",
+    min_value=0.1,
+    step=0.1
+)
 
-altura_maleza = st.checkbox("¿La maleza supera los 50 cm?")
+# -------------------------------
+# NUEVO: Cobertura manual
+# -------------------------------
+cobertura_pastos = st.number_input(
+    "Porcentaje de cobertura de pastos (%)",
+    min_value=0.0,
+    max_value=100.0,
+    step=1.0
+)
 
-pres_gramineas = st.selectbox("Presencia de gramíneas", ["Ninguna", "Baja", "Media", "Alta"])
-pres_hoja_ancha = st.selectbox("Presencia de hoja ancha", ["Ninguna", "Baja", "Media", "Alta"])
+cobertura_hojas = st.number_input(
+    "Porcentaje de cobertura de hojas anchas (%)",
+    min_value=0.0,
+    max_value=100.0,
+    step=1.0
+)
+
+# -------------------------------
+# NUEVO: Altura de la plantación
+# -------------------------------
+altura_plantacion = st.number_input(
+    "Altura promedio de la plantación (m)",
+    min_value=0.1,
+    step=0.1
+)
+
+# -------------------------------
+# Presencias específicas
+# -------------------------------
 pres_helechos = st.checkbox("¿Presencia de helechos?")
 pres_ciperaceas = st.checkbox("¿Presencia de ciperáceas?")
 pres_mortino = st.checkbox("¿Presencia de mortiño?")
@@ -36,87 +51,96 @@ pres_gargantillo = st.checkbox("¿Presencia de gargantillo?")
 pres_cuero_sapo = st.checkbox("¿Presencia de cuero de sapo?")
 pres_meloso = st.checkbox("¿Presencia de pasto meloso?")
 
-# Subir imágenes
-archivos = st.file_uploader("Selecciona tus imágenes", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
-
-if archivos and st.button("🔍 Analizar imágenes"):
-    porcentajes = []
-    for archivo in archivos:
-        file_bytes = np.asarray(bytearray(archivo.read()), dtype=np.uint8)
-        img = cv2.imdecode(file_bytes, 1)
-        p, _ = calcular_verde(img)
-        porcentajes.append(p)
-
-    promedio = np.mean(porcentajes) if porcentajes else 0
-    st.write(f"🌿 **Cobertura verde promedio:** {promedio:.2f}%")
-
-    # ==========================
-    # Cálculo de dosis
-    # ==========================
-    dosis_touch = 0
-    dosis_metsulfuron = 0
-
-    # --- GRAMÍNEAS (Touchdown)
-    if pres_gramineas != "Ninguna":
-        if pres_gramineas == "Alta":
-            porc_gram = (4/5) * promedio
-        elif pres_gramineas == "Media":
-            porc_gram = (1/2) * promedio
-        elif pres_gramineas == "Baja":
-            porc_gram = (1/3) * promedio
-
-        factor = 2.9 if promedio < 60 else 2.9
-        dosis_touch = (porc_gram/100) * hectareas * factor
+# ================================
+# Función: nivel de resistencia
+# ================================
+def nivel_resistencia(porc):
+    if porc < 30:
+        return "Bajo"
+    elif porc < 60:
+        return "Medio"
     else:
-        dosis_touch = 0  # sin gramíneas → no hay dosis
+        return "Alto"
 
-    # --- HOJA ANCHA (Metsulfurón)
-    if pres_hoja_ancha != "Ninguna":
-        if pres_hoja_ancha == "Alta":
-            porc_hoja = (5/5) * promedio
-        elif pres_hoja_ancha == "Media":
-            porc_hoja = (1/2) * promedio
-        elif pres_hoja_ancha == "Baja":
-            porc_hoja = (1/3) * promedio
+# ================================
+# Botón de cálculo
+# ================================
+if st.button("📐 Calcular dosis"):
 
-        dosis_metsulfuron = (porc_hoja/100) * hectareas * 2.6
-    else:
-        dosis_metsulfuron = 0  # sin hoja ancha → no hay dosis
+    # -------------------------------
+    # Nivel de resistencia
+    # -------------------------------
+    nivel_pastos = nivel_resistencia(cobertura_pastos)
+    nivel_hojas = nivel_resistencia(cobertura_hojas)
 
-    # --- Ajustes adicionales
+    # -------------------------------
+    # Dosis base por fumigadora
+    # -------------------------------
+    dosis_touch_fumi = 0      # cm³
+    dosis_mets_fumi = 0       # g
+
+    # --- TOUCHDOWN (Pastos)
+    if cobertura_pastos > 0:
+        if nivel_pastos == "Bajo":
+            dosis_touch_fumi = 350
+        elif nivel_pastos == "Medio":
+            dosis_touch_fumi = 400
+        elif nivel_pastos == "Alto":
+            dosis_touch_fumi = 550
+
+    # --- METSULFURÓN (Hojas anchas)
+    if cobertura_hojas > 0:
+        if nivel_hojas == "Bajo":
+            dosis_mets_fumi = 4
+        elif nivel_hojas == "Medio":
+            dosis_mets_fumi = 6
+        elif nivel_hojas == "Alto":
+            dosis_mets_fumi = 8
+
+    # -------------------------------
+    # Ajustes adicionales
+    # -------------------------------
     if pres_ciperaceas:
-        dosis_touch += 0.2 * hectareas
-    if pres_helechos:
-        dosis_metsulfuron += 0.1 * hectareas
-    if pres_meloso:
-        dosis_touch += 0.2 * hectareas
+        dosis_touch_fumi += 50
 
-    # Ajuste combinado: helechos + mortiño + gargantillo + cuero de sapo
+    if pres_helechos:
+        dosis_mets_fumi += 1
+
+    if pres_meloso:
+        dosis_touch_fumi += 50
+
     pres_extra = sum([pres_mortino, pres_gargantillo, pres_cuero_sapo])
     if pres_extra == 2:
-        dosis_metsulfuron += 0.1 * hectareas
+        dosis_mets_fumi += 1
     elif pres_extra == 3:
-        dosis_metsulfuron += 0.2 * hectareas
+        dosis_mets_fumi += 2
 
-    # --- Ajuste por altura
-    if altura_maleza:
-        dosis_touch += 0.3 * hectareas
-        dosis_metsulfuron += 0.2 * hectareas
+    # -------------------------------
+    # Selección de boquilla
+    # -------------------------------
+    if altura_plantacion <= 1.5:
+        boquilla = "Boquilla marcadora"
+        descarga = 320
+    elif altura_plantacion <= 3:
+        boquilla = "110015 ASJ o AI 110015"
+        descarga = 300
+    else:
+        boquilla = "8001 TEEJET"
+        descarga = 270
 
-    # --- ⚡ Nueva condición especial (baja cobertura + altura <50cm + sin pasto meloso)
-    if (promedio < 30) and (not altura_maleza) and (not pres_meloso):
-        if pres_gramineas in ["Baja", "Media"]:
-            dosis_touch += 0.2 * hectareas
-
-    # --- ⚡ Condición final: si no hay hoja ancha ni helechos, metsulfurón = 0
-    if pres_hoja_ancha == "Ninguna" and not pres_helechos:
-        dosis_metsulfuron = 0
-
-    # ==========================
+    # -------------------------------
     # Resultados finales
-    # ==========================
+    # -------------------------------
     st.subheader("📊 Resultados finales")
-    st.write(f"Dosis total de **Touchdown** para {hectareas:.1f} ha: {dosis_touch:.3f} L")
-    st.write(f"Dosis total de **Metsulfurón** para {hectareas:.1f} ha: {dosis_metsulfuron:.3f} unidades")
+
+    st.write(f"**Nivel de resistencia en pastos:** {nivel_pastos}")
+    st.write(f"**Nivel de resistencia en hojas anchas:** {nivel_hojas}")
+
+    st.write(f"🌾 **Touchdown:** {dosis_touch_fumi:.0f} cm³ por fumigadora")
+    st.write(f"🌿 **Metsulfurón:** {dosis_mets_fumi:.1f} g por fumigadora")
+
+    st.subheader("🔧 Configuración de aplicación")
+    st.write(f"**Boquilla recomendada:** {boquilla}")
+    st.write(f"**Descarga:** {descarga} cm³/min")
 
 
