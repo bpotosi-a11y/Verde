@@ -170,3 +170,7 @@ if st.button("📐 Calcular dosis"):
     st.write(f"**Boquilla recomendada:** {boquilla}")
     st.write(f"**Descarga:** {descarga} cm³/min")
 
+    st.subheader("🔧 Configuración de aplicación")
+    st.write(f"**Boquilla recomendada:** {boquilla}")
+    st.write(f"**Descarga:** {descarga} cm³/min")
+
