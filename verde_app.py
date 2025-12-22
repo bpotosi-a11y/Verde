@@ -4,7 +4,7 @@ import streamlit as st
 # ================================
 # 🌱 Interfaz con Streamlit
 # ================================
-st.title("🌱 Cálculo de Dosis para Control de Malezas")
+st.title("🌱 Cálculo de Dosis y Eficacia de Aplicación")
 
 # -------------------------------
 # Parámetros del lote
@@ -16,39 +16,40 @@ hectareas = st.number_input(
 )
 
 # -------------------------------
-# NUEVO: Cobertura manual
+# Cobertura
 # -------------------------------
 cobertura_pastos = st.number_input(
-    "Porcentaje de cobertura de pastos (%)",
-    min_value=0.0,
-    max_value=100.0,
-    step=1.0
+    "Cobertura de pastos (%)",
+    min_value=0.0, max_value=100.0, step=1.0
 )
 
 cobertura_hojas = st.number_input(
-    "Porcentaje de cobertura de hojas anchas (%)",
-    min_value=0.0,
-    max_value=100.0,
-    step=1.0
+    "Cobertura de hojas anchas (%)",
+    min_value=0.0, max_value=100.0, step=1.0
 )
 
 # -------------------------------
-# NUEVO: Altura de la plantación
+# Alturas y operación
 # -------------------------------
-altura_plantacion = st.number_input(
-    "Altura promedio de la plantación (m)",
-    min_value=0.1,
-    step=0.1
+altura_maleza = st.number_input(
+    "Altura promedio de la maleza (cm)",
+    min_value=5.0, step=5.0
 )
 
+velocidad = st.number_input(
+    "Velocidad de aplicación (m/min)",
+    value=40.0, step=1.0
+)
+
+st.caption("👉 Velocidad óptima recomendada: **40 m/min**")
+
 # -------------------------------
-# Presencias específicas
+# Presencias
 # -------------------------------
+floracion = st.checkbox("¿Pastos en floración?")
+pasto_resistente = st.checkbox("¿Presencia de pastos resistentes?")
 pres_helechos = st.checkbox("¿Presencia de helechos?")
 pres_ciperaceas = st.checkbox("¿Presencia de ciperáceas?")
-pres_mortino = st.checkbox("¿Presencia de mortiño?")
-pres_gargantillo = st.checkbox("¿Presencia de gargantillo?")
-pres_cuero_sapo = st.checkbox("¿Presencia de cuero de sapo?")
 pres_meloso = st.checkbox("¿Presencia de pasto meloso?")
 
 # ================================
@@ -63,84 +64,83 @@ def nivel_resistencia(porc):
         return "Alto"
 
 # ================================
-# Botón de cálculo
+# Botón principal
 # ================================
-if st.button("📐 Calcular dosis"):
+if st.button("📐 Calcular dosis y eficacia"):
 
     # -------------------------------
     # Nivel de resistencia
     # -------------------------------
     nivel_pastos = nivel_resistencia(cobertura_pastos)
-    nivel_hojas = nivel_resistencia(cobertura_hojas)
 
     # -------------------------------
-    # Dosis base por fumigadora
+    # Dosis base por fumigadora (cm³)
     # -------------------------------
-    dosis_touch_fumi = 0      # cm³
-    dosis_mets_fumi = 0       # g
+    if nivel_pastos == "Bajo":
+        dosis_touch_fumi = 350
+    elif nivel_pastos == "Medio":
+        dosis_touch_fumi = 400
+    else:
+        dosis_touch_fumi = 550
 
-    # --- TOUCHDOWN (Pastos)
-    if cobertura_pastos > 0:
-        if nivel_pastos == "Bajo":
-            dosis_touch_fumi = 350
-        elif nivel_pastos == "Medio":
-            dosis_touch_fumi = 400
-        elif nivel_pastos == "Alto":
-            dosis_touch_fumi = 550
-
-    # --- METSULFURÓN (Hojas anchas)
-    if cobertura_hojas > 0:
-        if nivel_hojas == "Bajo":
-            dosis_mets_fumi = 4
-        elif nivel_hojas == "Medio":
-            dosis_mets_fumi = 6
-        elif nivel_hojas == "Alto":
-            dosis_mets_fumi = 8
-
-    # -------------------------------
-    # Ajustes adicionales
-    # -------------------------------
+    # Ajustes
     if pres_ciperaceas:
         dosis_touch_fumi += 50
-
-    if pres_helechos:
-        dosis_mets_fumi += 1
-
     if pres_meloso:
         dosis_touch_fumi += 50
 
-    pres_extra = sum([pres_mortino, pres_gargantillo, pres_cuero_sapo])
-    if pres_extra == 2:
-        dosis_mets_fumi += 1
-    elif pres_extra == 3:
-        dosis_mets_fumi += 2
+    # -------------------------------
+    # Conversión a DHT (L/ha)
+    # Supuesto técnico: 20 fumigadoras/ha
+    # -------------------------------
+    DHT = (dosis_touch_fumi * 20) / 1000
 
     # -------------------------------
-    # Selección de boquilla
+    # MODELO DE REGRESIÓN (RES)
     # -------------------------------
-    if altura_plantacion <= 1.5:
-        boquilla = "Boquilla marcadora"
-        descarga = 320
-    elif altura_plantacion <= 3:
-        boquilla = "110015 ASJ o AI 110015"
-        descarga = 300
+    RES = (
+        0.306
+        - 0.0279 * cobertura_pastos
+        + 0.1265 * altura_maleza
+        + 0.0546 * velocidad
+        - 0.0075 * DHT
+        - 0.0099 * int(floracion)
+        + 0.0629 * int(pasto_resistente)
+    )
+
+    RES = max(0, min(RES * 100, 100))  # % y acotado
+
+    # -------------------------------
+    # Ajuste final de dosis según RES
+    # -------------------------------
+    factor_ajuste = 1.0
+    if RES > 40:
+        factor_ajuste = 1.20
+    elif RES > 30:
+        factor_ajuste = 1.10
+
+    dosis_final_fumi = dosis_touch_fumi * factor_ajuste
+
+    # -------------------------------
+    # Resultados
+    # -------------------------------
+    st.subheader("📊 Resultados técnicos")
+
+    st.write(f"**Nivel de resistencia:** {nivel_pastos}")
+    st.write(f"**Dosis base Touchdown:** {dosis_touch_fumi:.0f} cm³/fumigadora")
+    st.write(f"**Dosis final ajustada:** {dosis_final_fumi:.0f} cm³/fumigadora")
+    st.write(f"**Dosis Touchdown (DHT):** {DHT:.2f} L/ha")
+
+    st.subheader("🎯 Eficacia esperada")
+    st.write(f"**Maleza residual estimada (RES):** {RES:.1f} %")
+
+    if RES < 25:
+        st.success("✔ Alta eficacia esperada")
+    elif RES < 40:
+        st.warning("⚠ Eficacia media, monitorear rebrote")
     else:
-        boquilla = "8001 TEEJET"
-        descarga = 270
+        st.error("❌ Eficacia baja, ajuste obligatorio")
 
-    # -------------------------------
-    # Resultados finales
-    # -------------------------------
-    st.subheader("📊 Resultados finales")
-
-    st.write(f"**Nivel de resistencia en pastos:** {nivel_pastos}")
-    st.write(f"**Nivel de resistencia en hojas anchas:** {nivel_hojas}")
-
-    st.write(f"🌾 **Touchdown:** {dosis_touch_fumi:.0f} cm³ por fumigadora")
-    st.write(f"🌿 **Metsulfurón:** {dosis_mets_fumi:.1f} g por fumigadora")
-
-    st.subheader("🔧 Configuración de aplicación")
-    st.write(f"**Boquilla recomendada:** {boquilla}")
-    st.write(f"**Descarga:** {descarga} cm³/min")
-
+    st.subheader("🚶 Recomendación operativa")
+    st.write("Velocidad óptima sugerida: **40 m/min**")
 
