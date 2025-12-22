@@ -3,28 +3,13 @@ import streamlit as st
 # ================================
 # 🌱 Interfaz con Streamlit
 # ================================
-st.title("🌱 Cálculo técnico de dosis para control de malezas")
+st.title("🌱 Cálculo de Dosis para Control de Malezas")
 
-# -------------------------------
 # Parámetros del lote
-# -------------------------------
-hectareas = st.number_input(
-    "Número de hectáreas del lote",
-    min_value=0.1,
-    step=0.1
-)
-
-altura_plantacion = st.number_input(
-    "Altura promedio de la plantación (m)",
-    min_value=0.1,
-    step=0.1
-)
+hectareas = st.number_input("Número de hectáreas del lote", min_value=0.1, step=0.1)
 
 altura_maleza = st.checkbox("¿La maleza supera los 50 cm?")
 
-# -------------------------------
-# Presencia de grupos de malezas
-# -------------------------------
 pres_gramineas = st.selectbox("Presencia de gramíneas", ["Ninguna", "Baja", "Media", "Alta"])
 pres_hoja_ancha = st.selectbox("Presencia de hoja ancha", ["Ninguna", "Baja", "Media", "Alta"])
 
@@ -36,84 +21,90 @@ pres_cuero_sapo = st.checkbox("¿Presencia de cuero de sapo?")
 pres_meloso = st.checkbox("¿Presencia de pasto meloso?")
 
 # ================================
-# 📐 Cálculo de dosis
+# Conversión de niveles a porcentajes
+# ================================
+def porcentaje_por_nivel(nivel):
+    if nivel == "Baja":
+        return 17
+    elif nivel == "Media":
+        return 50
+    elif nivel == "Alta":
+        return 83
+    else:
+        return 0
+
+# ================================
+# Cálculo de dosis
 # ================================
 if st.button("📐 Calcular dosis"):
 
-    # -------------------------------
-    # Boquilla y descarga (TUS PARÁMETROS)
-    # -------------------------------
-    if altura_plantacion <= 1.5:
-        boquilla = "Boquilla marcadora"
-        descarga = 320
-        dosis_touch_ha = 2.0
-        dosis_mets_ha = 4
+    promedio = max(
+        porcentaje_por_nivel(pres_gramineas),
+        porcentaje_por_nivel(pres_hoja_ancha)
+    )
 
-    elif altura_plantacion <= 3.0:
-        boquilla = "110015 ASJ o AI 110015"
-        descarga = 300
-        dosis_touch_ha = 2.8
-        dosis_mets_ha = 6
+    dosis_touch = 0
+    dosis_metsulfuron = 0
 
-    else:
-        boquilla = "8001 TEEJET"
-        descarga = 270
-        dosis_touch_ha = 3.5
-        dosis_mets_ha = 8
+    # --- GRAMÍNEAS (Touchdown)
+    if pres_gramineas != "Ninguna":
+        if pres_gramineas == "Alta":
+            porc_gram = (4/5) * promedio
+        elif pres_gramineas == "Media":
+            porc_gram = (1/2) * promedio
+        elif pres_gramineas == "Baja":
+            porc_gram = (1/3) * promedio
 
-    # -------------------------------
-    # Ajustes por composición florística
-    # -------------------------------
-    if pres_gramineas == "Ninguna":
-        dosis_touch_ha = 0
+        factor = 2.9
+        dosis_touch = (porc_gram / 100) * hectareas * factor
 
-    if pres_hoja_ancha == "Ninguna" and not pres_helechos:
-        dosis_mets_ha = 0
+    # --- HOJA ANCHA (Metsulfurón)
+    if pres_hoja_ancha != "Ninguna":
+        if pres_hoja_ancha == "Alta":
+            porc_hoja = promedio
+        elif pres_hoja_ancha == "Media":
+            porc_hoja = (1/2) * promedio
+        elif pres_hoja_ancha == "Baja":
+            porc_hoja = (1/3) * promedio
 
+        dosis_metsulfuron = (porc_hoja / 100) * hectareas * 2.6
+
+    # --- Ajustes adicionales (ORIGINALES)
     if pres_ciperaceas:
-        dosis_touch_ha += 0.3
-
-    if pres_meloso:
-        dosis_touch_ha += 0.4
-
+        dosis_touch += 0.2 * hectareas
     if pres_helechos:
-        dosis_mets_ha += 1
+        dosis_metsulfuron += 0.1 * hectareas
+    if pres_meloso:
+        dosis_touch += 0.2 * hectareas
 
-    especies_dificiles = sum([pres_mortino, pres_gargantillo, pres_cuero_sapo])
-    if especies_dificiles == 2:
-        dosis_mets_ha += 1
-    elif especies_dificiles == 3:
-        dosis_mets_ha += 2
+    pres_extra = sum([pres_mortino, pres_gargantillo, pres_cuero_sapo])
+    if pres_extra == 2:
+        dosis_metsulfuron += 0.1 * hectareas
+    elif pres_extra == 3:
+        dosis_metsulfuron += 0.2 * hectareas
 
-    # -------------------------------
-    # Ajuste por altura de maleza
-    # -------------------------------
+    # --- Ajuste por altura de maleza
     if altura_maleza:
-        dosis_touch_ha += 0.4
-        dosis_mets_ha += 1
+        dosis_touch += 0.3 * hectareas
+        dosis_metsulfuron += 0.2 * hectareas
 
-    # -------------------------------
-    # Totales
-    # -------------------------------
-    total_touch = dosis_touch_ha * hectareas
-    total_mets = dosis_mets_ha * hectareas
+    # --- Condición especial original
+    if (promedio < 30) and (not altura_maleza) and (not pres_meloso):
+        if pres_gramineas in ["Baja", "Media"]:
+            dosis_touch += 0.2 * hectareas
+
+    # --- Condición final original
+    if pres_hoja_ancha == "Ninguna" and not pres_helechos:
+        dosis_metsulfuron = 0
 
     # ================================
-    # Resultados finales
+    # Resultados
     # ================================
     st.subheader("📊 Resultados finales")
 
-    st.write(f"🔧 **Boquilla recomendada:** {boquilla}")
-    st.write(f"💧 **Descarga:** {descarga} cm³/min")
+    st.write(f"🌾 **Touchdown total:** {dosis_touch:.3f} L")
+    st.write(f"🌿 **Metsulfurón total:** {dosis_metsulfuron:.3f} unidades")
 
-    st.write(f"🌾 **Touchdown:** {dosis_touch_ha:.2f} L/ha → **Total:** {total_touch:.2f} L")
-    st.write(f"🌿 **Metsulfurón:** {dosis_mets_ha:.1f} g/ha → **Total:** {total_mets:.1f} g")
-
-    # -------------------------------
-    # Recomendación técnica final
-    # -------------------------------
-    if dosis_touch_ha >= 3.5 and dosis_mets_ha >= 8:
-        st.warning(
-            "⚠️ Bajo estas condiciones se recomienda evaluar "
-            "control mecanizado complementario para mejorar la eficacia."
-        )
+    st.subheader("🚜 Dosis por fumigadora (≈ 1 ha)")
+    st.write(f"Touchdown: {dosis_touch / hectareas:.3f} L / fumigadora")
+    st.write(f"Metsulfurón: {dosis_metsulfuron / hectareas:.3f} unidades / fumigadora")
