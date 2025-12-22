@@ -100,15 +100,15 @@ if porc_hojas == 0 and not pres_helechos:
 # DOSIS POR FUMIGADORA (TABLA)
 # ================================
 touch_fumi = {
-    "Baja": "350 cm³",
-    "Media": "400 cm³",
-    "Alta": "550 cm³"
+    "Baja": "400 cm³",
+    "Media": "480 cm³",
+    "Alta": "650 cm³"
 }
 
 metsul_fumi = {
     "Baja": "4 g",
     "Media": "6 g",
-    "Alta": "7–8 g"
+    "Alta": "10 g"
 }
 
 # ================================
