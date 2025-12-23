@@ -1,69 +1,93 @@
 import streamlit as st
 
 # ============================================================
-# 🌱 INTERFAZ GENERAL
+# 🌱 CONFIGURACIÓN GENERAL
 # ============================================================
 st.set_page_config(page_title="Cálculo de dosis de malezas", layout="centered")
-st.title("🌱 Cálculo de dosis para control de malezas")
+
+st.markdown(
+    "<h1 style='text-align: center;'>🌲 Cálculo de dosis para control de malezas</h1>",
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    "<p style='text-align: center;'>Herramienta técnica para manejo forestal</p>",
+    unsafe_allow_html=True
+)
 
 st.markdown("---")
 
 # ============================================================
 # 📐 PARÁMETROS DEL LOTE
 # ============================================================
-st.header("📐 Parámetros del lote")
+st.markdown("<h2 style='text-align: center;'>📐 Parámetros del lote</h2>", unsafe_allow_html=True)
 
-hectareas = st.number_input(
-    "Número de hectáreas del lote",
-    min_value=0.1,
-    step=0.1
-)
+col1, col2 = st.columns(2)
 
-altura_plantacion = st.number_input(
-    "Altura de la plantación (m)",
-    min_value=0.1,
-    step=0.1
-)
+with col1:
+    hectareas = st.number_input(
+        "🌍 Número de hectáreas del lote",
+        min_value=0.1,
+        step=0.1
+    )
+
+with col2:
+    altura_plantacion = st.number_input(
+        "🌳 Altura de la plantación (m)",
+        min_value=0.1,
+        step=0.1
+    )
 
 st.markdown("---")
 
 # ============================================================
 # 🌿 COBERTURA DE MALEZAS
 # ============================================================
-st.header("🌿 Cobertura de malezas")
+st.markdown("<h2 style='text-align: center;'>🌿 Cobertura de malezas</h2>", unsafe_allow_html=True)
 
-porc_pastos = st.number_input(
-    "Cobertura de PASTOS (%)",
-    min_value=0.0,
-    max_value=100.0,
-    step=1.0
-)
+col3, col4 = st.columns(2)
 
-porc_hojas = st.number_input(
-    "Cobertura de HOJAS ANCHAS (%)",
-    min_value=0.0,
-    max_value=100.0,
-    step=1.0
-)
+with col3:
+    porc_pastos = st.number_input(
+        "🌱 Cobertura de PASTOS (%)",
+        min_value=0.0,
+        max_value=100.0,
+        step=1.0
+    )
 
-altura_maleza = st.checkbox("¿La maleza supera los 50 cm?")
+with col4:
+    porc_hojas = st.number_input(
+        "🍃 Cobertura de HOJAS ANCHAS (%)",
+        min_value=0.0,
+        max_value=100.0,
+        step=1.0
+    )
+
+altura_maleza = st.checkbox("📏 ¿La maleza supera los 50 cm?")
 
 st.markdown("---")
 
 # ============================================================
 # 🌱 ESPECIES PROBLEMA
 # ============================================================
-st.header("🌱 Presencia de especies problema")
+st.markdown("<h2 style='text-align: center;'>🌱 Especies problema</h2>", unsafe_allow_html=True)
 
-pres_helechos = st.checkbox("Helechos")
-pres_ciperaceas = st.checkbox("Ciperáceas")
-pres_mortino = st.checkbox("Mortiño")
-pres_gargantillo = st.checkbox("Gargantillo")
-pres_cuero_sapo = st.checkbox("Cuero de sapo")
-pres_meloso = st.checkbox("Pasto meloso")
+col5, col6, col7 = st.columns(3)
+
+with col5:
+    pres_helechos = st.checkbox("🌿 Helechos")
+    pres_ciperaceas = st.checkbox("🌾 Ciperáceas")
+
+with col6:
+    pres_mortino = st.checkbox("🌱 Mortiño")
+    pres_gargantillo = st.checkbox("🌿 Gargantillo")
+
+with col7:
+    pres_cuero_sapo = st.checkbox("🍃 Cuero de sapo")
+    pres_meloso = st.checkbox("🌾 Pasto meloso")
 
 # ============================================================
-# 🔢 CLASIFICACIÓN DE COBERTURA (ORIGINAL)
+# 🔢 CLASIFICACIÓN DE COBERTURA (ORIGINAL – NO TOCAR)
 # ============================================================
 def clasificar(p):
     if p <= 33:
@@ -82,7 +106,6 @@ nivel_hojas = clasificar(porc_hojas)
 dosis_touch_total = 0
 dosis_mets_total = 0
 
-# --- Pastos (Touchdown)
 if porc_pastos > 0:
     if nivel_pastos == "Alta":
         porc_gram = (4/5) * porc_pastos
@@ -94,7 +117,6 @@ if porc_pastos > 0:
     factor = 2.9
     dosis_touch_total = (porc_gram / 100) * hectareas * factor
 
-# --- Hojas anchas (Metsulfurón)
 if porc_hojas > 0:
     if nivel_hojas == "Alta":
         porc_hoja = (5/5) * porc_hojas
@@ -105,7 +127,6 @@ if porc_hojas > 0:
 
     dosis_mets_total = (porc_hoja / 100) * hectareas * 2.6
 
-# --- Ajustes originales
 if pres_ciperaceas:
     dosis_touch_total += 0.2 * hectareas
 
@@ -129,13 +150,13 @@ if porc_hojas == 0 and not pres_helechos:
     dosis_mets_total = 0
 
 # ============================================================
-# 📊 DOSIS POR HECTÁREA (DERIVADA – ORIGINAL)
+# 📊 DOSIS POR HECTÁREA (ORIGINAL)
 # ============================================================
 dosis_touch_ha = dosis_touch_total / hectareas
 dosis_mets_ha = dosis_mets_total / hectareas
 
 # ============================================================
-# 🚿 DOSIS POR FUMIGADORA (SOLO INFORMATIVA – NO CALCULA)
+# 🚿 DOSIS POR FUMIGADORA (SOLO REFERENCIA)
 # ============================================================
 def dosis_fumigadora_touchdown(p):
     if p <= 20:
@@ -172,17 +193,23 @@ else:
 # 📈 RESULTADOS
 # ============================================================
 st.markdown("---")
-st.header("📈 Resultados")
+st.markdown("<h2 style='text-align: center;'>📈 Resultados</h2>", unsafe_allow_html=True)
 
-st.subheader("🌱 Pastos – Touchdown")
-st.write(f"**Dosis total del lote:** {dosis_touch_total:.2f} L")
-st.write(f"**Dosis equivalente:** {dosis_touch_ha:.2f} L/ha")
-st.write(f"**Dosis por fumigadora:** {touch_fumi}")
+col8, col9 = st.columns(2)
 
-st.subheader("🌿 Hojas anchas – Metsulfurón")
-st.write(f"**Dosis total del lote:** {dosis_mets_total:.2f} unidades")
-st.write(f"**Dosis equivalente:** {dosis_mets_ha:.2f} unidades/ha")
-st.write(f"**Dosis por fumigadora:** {mets_fumi[nivel_hojas]}")
+with col8:
+    st.subheader("🌱 Pastos – Touchdown")
+    st.write(f"**Dosis total del lote:** {dosis_touch_total:.2f} L")
+    st.write(f"**Dosis equivalente:** {dosis_touch_ha:.2f} L/ha")
+    st.write(f"**Dosis por fumigadora:** {touch_fumi}")
+
+with col9:
+    st.subheader("🌿 Hojas anchas – Metsulfurón")
+    st.write(f"**Dosis total del lote:** {dosis_mets_total:.2f} unidades")
+    st.write(f"**Dosis equivalente:** {dosis_mets_ha:.2f} unidades/ha")
+    st.write(f"**Dosis por fumigadora:** {mets_fumi[nivel_hojas]}")
+
+st.markdown("---")
 
 st.subheader("🔧 Boquilla recomendada")
 st.write(f"{boquilla} – descarga {descarga}")
