@@ -74,7 +74,7 @@ with col7:
 st.markdown("---")
 
 # ================================
-# CLASIFICACIÓN DE COBERTURA
+# CLASIFICACIÓN DE COBERTURA (ORIGINAL)
 # ================================
 def clasificar(p):
     if p <= 33:
@@ -144,9 +144,21 @@ dosis_touch_ha = dosis_touch_total / hectareas
 dosis_mets_ha = dosis_mets_total / hectareas
 
 # ================================
-# DOSIS POR FUMIGADORA
+# DOSIS POR FUMIGADORA (AJUSTADA SOLO PARA TOUCHDOWN)
 # ================================
-touch_fumi = {"Baja": "350 cm³", "Media": "400 cm³", "Alta": "550 cm³"}
+def dosis_fumi_touch(p):
+    if p <= 20:
+        return "350 cc"
+    elif p <= 40:
+        return "420 cc"
+    elif p <= 70:
+        return "530 cc"
+    else:
+        return "650 cc"
+
+touch_fumi = dosis_fumi_touch(porc_pastos)
+
+# Metsulfurón SIN CAMBIOS
 mets_fumi = {"Baja": "4 g", "Media": "6 g", "Alta": "7–8 g"}
 
 # ================================
@@ -174,7 +186,7 @@ with col8:
     st.markdown("### 🌱 Pastos – Touchdown")
     st.write(f"**Dosis total:** {dosis_touch_total:.2f} L")
     st.write(f"**Dosis por ha:** {dosis_touch_ha:.2f} L/ha")
-    st.write(f"**Por fumigadora:** {touch_fumi[nivel_pastos]}")
+    st.write(f"**Por fumigadora:** {touch_fumi}")
 
 with col9:
     st.markdown("### 🌿 Hojas anchas – Metsulfurón")
